@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"code-reviewer/internal/config"
 	"context"
 	"fmt"
 	"log"
@@ -69,11 +70,30 @@ type Agent struct {
 func New() *Agent {
 	ctx := context.Background()
 
+	cfg, err := config.Load()
+	if err != nil {
+		log.Printf("Warning: Failed to load config: %v", err)
+		// Fallback to empty config, will prompt below
+		cfg = &config.Config{}
+	}
+
+	if cfg.GoogleAIAPIKey == "" {
+		apiKey, err := config.PromptForAPIKey()
+		if err != nil {
+			log.Fatalf("Failed to get API key: %v", err)
+		}
+		if apiKey == "" {
+			log.Fatal("API key cannot be empty")
+		}
+		cfg.GoogleAIAPIKey = apiKey
+		if err := config.Save(cfg); err != nil {
+			log.Printf("Warning: Failed to save config: %v", err)
+		}
+	}
+
 	// Use a default Gemini model.
-	// Assuming nil config is acceptable for default settings.
-	// You might need to set API key via environment variable GOOGLE_API_KEY.
 	m, err := gemini.NewModel(ctx, "gemini-2.5-flash", &genai.ClientConfig{
-		APIKey: "<YOUR-API-KEY-HERE>",
+		APIKey: cfg.GoogleAIAPIKey,
 	})
 
 	if err != nil {
