@@ -1,8 +1,5 @@
 # AI Code Review Agent CLI
 
-[English](README.en.md) | [한국어](README.ko.md)
-
-
 **AI Code Review Agent CLI** is a tool that leverages Google Gemini AI to automatically analyze Git changes and provide professional review reports for code quality improvement.
 
 This project aims to streamline the code review process by proactively identifying potential bugs, security vulnerabilities, and performance issues in developer code, and providing concrete improvement suggestions in Korean (or English).
