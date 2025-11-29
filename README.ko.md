@@ -48,17 +48,14 @@ go build -o code-reviewer main.go
 
 ## Usage
 ```bash
-# Run code review (default behavior)
-./code-reviewer review
+# 코드 리뷰 실행 (기본값: Unstaged 변경 사항)
+./code-reviewer report
 
-# Run code review explicitly
-./code-reviewer review report
+# Staged 변경 사항에 대한 코드 리뷰 실행
+./code-reviewer report --staged
 
-# Run code review on staged changes
-./code-reviewer review --staged
-
-# Generate auto-fixes for code issues
-./code-reviewer review fix
+# 코드 문제에 대한 자동 수정 생성 (아직 미지원)
+./code-reviewer fix
 ```
 
 ## Key Features
@@ -68,21 +65,3 @@ go build -o code-reviewer main.go
 *   **자동 등급 분류**: 변경된 기능별로 **Good**, **Not Bad**, **Bad**, **Need Check** 4단계 등급을 매겨 중요도를 한눈에 파악할 수 있습니다.
 *   **구체적인 개선 제안**: 단순한 지적을 넘어, 수정이 필요한 부분에 대해 바로 적용 가능한 코드 스니펫과 리팩토링 가이드를 제공합니다.
 *   **Git 통합**: 현재 Git 저장소의 Staged 및 Unstaged 변경 사항을 자동으로 감지합니다.
-
-## Project Structure
-
-```
-code-reviewer/
-├── cmd/                # CLI 명령어 정의 (Cobra)
-│   ├── root.go         # 루트 명령어 및 전역 설정
-│   ├── review.go       # 'review' 명령어 (메인 기능)
-│   ├── report.go       # 'report' 서브 명령어
-│   └── fix.go          # 'fix' 서브 명령어
-├── internal/           # 비공개 애플리케이션 로직
-│   ├── agent/          # AI 에이전트 로직 (Gemini 연동, 프롬프트 관리)
-│   ├── config/         # 설정 파일 로드 및 저장
-│   └── git/            # Git 명령어 실행 래퍼
-├── main.go             # 애플리케이션 진입점
-├── go.mod              # Go 모듈 정의
-└── README.md           # 프로젝트 문서
-```

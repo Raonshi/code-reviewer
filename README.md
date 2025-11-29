@@ -51,17 +51,14 @@ On the first run, you will be prompted to enter your Google AI API Key.
 
 ## Usage
 ```bash
-# Run code review (default behavior)
-./code-reviewer review
-
-# Run code review explicitly
-./code-reviewer review report
+# Run code review (default: unstaged changes)
+./code-reviewer report
 
 # Run code review on staged changes
-./code-reviewer review --staged
+./code-reviewer report --staged
 
-# Generate auto-fixes for code issues
-./code-reviewer review fix
+# Generate auto-fixes for code issues (NOT SUPPORTED YET)
+./code-reviewer fix
 ```
 
 ## Key Features
@@ -71,21 +68,3 @@ On the first run, you will be prompted to enter your Google AI API Key.
 *   **Automatic Grading**: Changes are automatically graded into 4 levels: **Good**, **Not Bad**, **Bad**, **Need Check** to quickly identify importance.
 *   **Concrete Improvement Suggestions**: Beyond simple pointers, it provides immediately applicable code snippets and refactoring guides for areas needing correction.
 *   **Git Integration**: Automatically detects Staged and Unstaged changes in the current Git repository.
-
-## Project Structure
-
-```
-code-reviewer/
-├── cmd/                # CLI command definitions (Cobra)
-│   ├── root.go         # Root command and global settings
-│   ├── review.go       # 'review' command (main feature)
-│   ├── report.go       # 'report' subcommand
-│   └── fix.go          # 'fix' subcommand
-├── internal/           # Private application logic
-│   ├── agent/          # AI agent logic (Gemini integration, prompt management)
-│   ├── config/         # Config file loading and saving
-│   └── git/            # Git command execution wrapper
-├── main.go             # Application entry point
-├── go.mod              # Go module definition
-└── README.md           # Project documentation
-```
