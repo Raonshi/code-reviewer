@@ -45,6 +45,21 @@ func TestSaveAndLoad(t *testing.T) {
 		t.Errorf("Expected API key %q, got %q", expectedKey, loadedCfg.GoogleAIAPIKey)
 	}
 
+	// Test case 3: Save and Load with AI Model
+	expectedModel := "gemini-pro"
+	cfg.AIModel = expectedModel
+	if err := Save(cfg); err != nil {
+		t.Fatalf("Save() failed with model: %v", err)
+	}
+
+	loadedCfgWithModel, err := Load()
+	if err != nil {
+		t.Fatalf("Load() failed after save with model: %v", err)
+	}
+	if loadedCfgWithModel.AIModel != expectedModel {
+		t.Errorf("Expected AI Model %q, got %q", expectedModel, loadedCfgWithModel.AIModel)
+	}
+
 	// Test case 3: Check permissions
 	configPath := filepath.Join(tempHome, configDirName, configFileName)
 	info, err := os.Stat(configPath)

@@ -108,8 +108,25 @@ func New() *Agent {
 		}
 	}
 
-	// Use a default Gemini model.
-	m, err := gemini.NewModel(ctx, "gemini-2.5-flash", &genai.ClientConfig{
+	if cfg.AIModel == "" {
+		modelName, err := config.PromptForAIModel()
+		if err != nil {
+			log.Fatalf("Failed to get AI Model: %v", err)
+		}
+		if modelName == "" {
+			// Default fallback if user just presses enter?
+			// Or enforce it? Let's enforce it for now as per plan, or maybe default to gemini-2.5-flash if empty?
+			// The prompt says "e.g., gemini-2.5-flash", let's default to it if empty for better UX.
+			modelName = "gemini-2.5-flash"
+		}
+		cfg.AIModel = modelName
+		if err := config.Save(cfg); err != nil {
+			log.Printf("Warning: Failed to save config: %v", err)
+		}
+	}
+
+	// Use the configured Gemini model.
+	m, err := gemini.NewModel(ctx, cfg.AIModel, &genai.ClientConfig{
 		APIKey: cfg.GoogleAIAPIKey,
 	})
 

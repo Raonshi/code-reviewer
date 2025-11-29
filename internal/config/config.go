@@ -15,6 +15,7 @@ const configFileName = "config.json"
 // Config holds the application configuration.
 type Config struct {
 	GoogleAIAPIKey string `json:"google_ai_api_key"`
+	AIModel        string `json:"ai_model"`
 }
 
 // getConfigPath returns the full path to the configuration file.
@@ -81,6 +82,17 @@ func Save(cfg *Config) error {
 func PromptForAPIKey() (string, error) {
 	reader := bufio.NewReader(os.Stdin)
 	fmt.Print("Google AI API Key not found. Please enter your Google AI API Key: ")
+	text, err := reader.ReadString('\n')
+	if err != nil {
+		return "", fmt.Errorf("failed to read input: %w", err)
+	}
+	return strings.TrimSpace(text), nil
+}
+
+// PromptForAIModel asks the user to input their desired AI Model via stdin.
+func PromptForAIModel() (string, error) {
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Print("AI Model not found. Please enter the AI Model to use (e.g., gemini-2.5-flash): ")
 	text, err := reader.ReadString('\n')
 	if err != nil {
 		return "", fmt.Errorf("failed to read input: %w", err)
