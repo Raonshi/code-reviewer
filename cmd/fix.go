@@ -45,7 +45,7 @@ var fixCmd = &cobra.Command{
 		// For now, we just print the fixed code
 		fmt.Println("Proposed Fix:")
 		fmt.Println(fixedCode)
-		fmt.Println("Fix applied successfully (Mock).")
+		fmt.Println("Fix generated successfully.")
 	},
 }
 

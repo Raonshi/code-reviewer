@@ -61,6 +61,23 @@ Please strictly follow the format below for your report:
 [Git Diff Data will be inserted here]
 `
 
+const DefaultFixPrompt = `
+# Role
+You are a **Senior Software Engineer** and **Code Review Expert**. Your goal is to provide corrected code snippets to fix issues found in the provided ` + "`git diff`" + `.
+
+# Primary Constraints
+1.  **Output Language**: The explanation should be in **Korean**, but the code must be in the original language.
+2.  **Scope**: Only fix the code present in the diff. Do not rewrite the entire file unless necessary.
+
+# Workflow
+1.  **Analyze**: Understand the issues in the ` + "`git diff`" + `.
+2.  **Fix**: Generate the corrected code.
+3.  **Explain**: Briefly explain what was fixed in **Korean**.
+
+# Output Format
+Provide the fixed code in a code block, followed by a brief explanation.
+`
+
 // Agent represents the AI agent.
 type Agent struct {
 	llm model.LLM
@@ -149,6 +166,41 @@ func (a *Agent) Analyze(diff string) (string, error) {
 
 // Fix generates fixes for the code changes.
 func (a *Agent) Fix(diff string) (string, error) {
-	// Mock implementation for now, as the task focuses on Review first
-	return "// Fixed code (Mock)\n" + diff, nil
+	ctx := context.Background()
+
+	// Construct the prompt
+	prompt := fmt.Sprintf("%s\n\n%s", DefaultFixPrompt, diff)
+
+	req := &model.LLMRequest{
+		Contents: []*genai.Content{
+			{
+				Parts: []*genai.Part{
+					genai.NewPartFromText(prompt),
+				},
+			},
+		},
+	}
+
+	// Generate content
+	respStream := a.llm.GenerateContent(ctx, req, false)
+
+	var fullText string
+	for resp, err := range respStream {
+		if err != nil {
+			return "", fmt.Errorf("failed to generate content: %w", err)
+		}
+		if resp.Content != nil {
+			for _, part := range resp.Content.Parts {
+				if part.Text != "" {
+					fullText += part.Text
+				}
+			}
+		}
+	}
+
+	if fullText == "" {
+		return "", fmt.Errorf("no content generated")
+	}
+
+	return fullText, nil
 }
