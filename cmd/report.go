@@ -3,6 +3,7 @@ package cmd
 import (
 	"code-reviewer/internal/agent"
 	"code-reviewer/internal/git"
+	"code-reviewer/internal/ui"
 	"fmt"
 	"os"
 
@@ -27,7 +28,9 @@ var reportCmd = &cobra.Command{
 		}
 
 		a := agent.New()
-		report, err := a.Analyze(diff)
+		report, err := ui.RunProgram(func() (string, error) {
+			return a.Analyze(diff)
+		})
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error analyzing code: %v\n", err)
 			os.Exit(1)

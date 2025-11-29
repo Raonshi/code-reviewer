@@ -3,6 +3,7 @@ package cmd
 import (
 	"code-reviewer/internal/agent"
 	"code-reviewer/internal/git"
+	"code-reviewer/internal/ui"
 	"fmt"
 	"os"
 
@@ -35,7 +36,9 @@ var fixCmd = &cobra.Command{
 		}
 
 		a := agent.New()
-		fixedCode, err := a.Fix(diff)
+		fixedCode, err := ui.RunProgram(func() (string, error) {
+			return a.Fix(diff)
+		})
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error generating fix: %v\n", err)
 			os.Exit(1)
