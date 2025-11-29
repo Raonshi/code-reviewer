@@ -8,7 +8,7 @@
 
 *   **Language**: Go 1.25.4
 *   **CLI Framework**: [Cobra](https://github.com/spf13/cobra)
-*   **AI Model**: Google Gemini 2.5 Flash (via [Google GenAI SDK](https://github.com/googleapis/go-genai))
+*   **AI Model**: Google Gemini (설정 가능, 기본값: `gemini-2.5-flash`) (via [Google GenAI SDK](https://github.com/googleapis/go-genai))
 *   **Configuration**: JSON based local config
 
 ## Getting Started
@@ -44,7 +44,7 @@ go build -o code-reviewer main.go
 ./code-reviewer --help
 ```
 
-첫 실행 시, Google AI API Key를 입력하라는 메시지가 표시됩니다. 
+첫 실행 시, Google AI API Key와 사용할 AI 모델(기본값: `gemini-2.5-flash`)을 입력하라는 메시지가 표시됩니다.
 
 ## Usage
 ```bash
@@ -60,7 +60,7 @@ go build -o code-reviewer main.go
 
 ## Key Features
 
-*   **AI 기반 코드 리뷰**: Google Gemini 2.5 Flash 모델을 사용하여 코드 변경 사항(`git diff`)을 심층 분석합니다.
+*   **AI 기반 코드 리뷰**: Google Gemini 모델(설정 가능)을 사용하여 코드 변경 사항(`git diff`)을 심층 분석합니다.
 *   **한국어 리포트**: 모든 분석 결과와 개선 제안은 한국어로 제공되어 이해하기 쉽습니다.
 *   **자동 등급 분류**: 변경된 기능별로 **Good**, **Not Bad**, **Bad**, **Need Check** 4단계 등급을 매겨 중요도를 한눈에 파악할 수 있습니다.
 *   **구체적인 개선 제안**: 단순한 지적을 넘어, 수정이 필요한 부분에 대해 바로 적용 가능한 코드 스니펫과 리팩토링 가이드를 제공합니다.

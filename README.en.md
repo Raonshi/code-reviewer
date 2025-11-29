@@ -8,7 +8,7 @@ This project aims to streamline the code review process by proactively identifyi
 
 *   **Language**: Go 1.25.4
 *   **CLI Framework**: [Cobra](https://github.com/spf13/cobra)
-*   **AI Model**: Google Gemini 2.5 Flash (via [Google GenAI SDK](https://github.com/googleapis/go-genai))
+*   **AI Model**: Google Gemini (Configurable, default: `gemini-2.5-flash`) (via [Google GenAI SDK](https://github.com/googleapis/go-genai))
 *   **Configuration**: JSON based local config
 
 ## Getting Started
@@ -44,7 +44,7 @@ go build -o code-reviewer main.go
 ./code-reviewer --help
 ```
 
-On the first run, you will be prompted to enter your Google AI API Key.
+On the first run, you will be prompted to enter your Google AI API Key and select an AI Model (default: `gemini-2.5-flash`).
 
 ## Usage
 ```bash
@@ -60,7 +60,7 @@ On the first run, you will be prompted to enter your Google AI API Key.
 
 ## Key Features
 
-*   **AI-Powered Code Review**: Uses the Google Gemini 2.5 Flash model to deeply analyze code changes (`git diff`).
+*   **AI-Powered Code Review**: Uses Google Gemini models (configurable) to deeply analyze code changes (`git diff`).
 *   **Korean Reports**: All analysis results and improvement suggestions are provided in Korean for easy understanding.
 *   **Automatic Grading**: Changes are automatically graded into 4 levels: **Good**, **Not Bad**, **Bad**, **Need Check** to quickly identify importance.
 *   **Concrete Improvement Suggestions**: Beyond simple pointers, it provides immediately applicable code snippets and refactoring guides for areas needing correction.
