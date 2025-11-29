@@ -50,5 +50,5 @@ var fixCmd = &cobra.Command{
 }
 
 func init() {
-	reviewCmd.AddCommand(fixCmd)
+	rootCmd.AddCommand(fixCmd)
 }

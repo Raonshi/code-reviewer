@@ -9,24 +9,16 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var reportStaged bool
+
 var reportCmd = &cobra.Command{
 	Use:   "report",
 	Short: "Generate a code review report",
 	Run: func(cmd *cobra.Command, args []string) {
-		// Try staged first
-		diff, err := git.GetDiff(true)
+		diff, err := git.GetDiff(reportStaged)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error getting staged diff: %v\n", err)
+			fmt.Fprintf(os.Stderr, "Error getting diff: %v\n", err)
 			os.Exit(1)
-		}
-
-		// If no staged changes, try unstaged
-		if diff == "" {
-			diff, err = git.GetDiff(false)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error getting unstaged diff: %v\n", err)
-				os.Exit(1)
-			}
 		}
 
 		if diff == "" {
@@ -46,5 +38,6 @@ var reportCmd = &cobra.Command{
 }
 
 func init() {
-	reviewCmd.AddCommand(reportCmd)
+	rootCmd.AddCommand(reportCmd)
+	reportCmd.Flags().BoolVar(&reportStaged, "staged", false, "Review staged changes")
 }
