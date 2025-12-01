@@ -51,7 +51,7 @@ On the first run, you will be prompted to enter your Google AI API Key.
 
 ## Usage
 ```bash
-# Run code review (default: unstaged changes)
+# Run code review (default: all changes)
 ./code-reviewer report
 
 # Run code review on staged changes
