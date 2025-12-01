@@ -109,19 +109,56 @@ func New() *Agent {
 	}
 
 	if cfg.AIModel == "" {
-		modelName, err := config.PromptForAIModel()
-		if err != nil {
-			log.Fatalf("Failed to get AI Model: %v", err)
-		}
-		if modelName == "" {
-			// Default fallback if user just presses enter?
-			// Or enforce it? Let's enforce it for now as per plan, or maybe default to gemini-2.5-flash if empty?
-			// The prompt says "e.g., gemini-2.5-flash", let's default to it if empty for better UX.
-			modelName = "gemini-2.5-flash"
-		}
-		cfg.AIModel = modelName
-		if err := config.Save(cfg); err != nil {
-			log.Printf("Warning: Failed to save config: %v", err)
+		for {
+			modelName, err := config.PromptForAIModel()
+			if err != nil {
+				log.Fatalf("Failed to get AI Model: %v", err)
+			}
+			if modelName == "" {
+				modelName = "gemini-2.5-flash"
+			}
+
+			// Validate the model
+			fmt.Printf("Validating model '%s'...\n", modelName)
+			tempModel, err := gemini.NewModel(ctx, modelName, &genai.ClientConfig{
+				APIKey: cfg.GoogleAIAPIKey,
+			})
+			if err != nil {
+				fmt.Printf("Error creating model client: %v. Please try again.\n", err)
+				continue
+			}
+
+			// Try a minimal generation to verify the model name and API key
+			validateReq := &model.LLMRequest{
+				Contents: []*genai.Content{
+					{
+						Parts: []*genai.Part{
+							genai.NewPartFromText("Hi"),
+						},
+					},
+				},
+			}
+			// We need to consume the stream to check for errors
+			stream := tempModel.GenerateContent(ctx, validateReq, false)
+			var validationErr error
+			for _, err := range stream {
+				if err != nil {
+					validationErr = err
+					break
+				}
+			}
+
+			if validationErr != nil {
+				fmt.Printf("Validation failed: %v. Please check the model name and try again.\n", validationErr)
+				continue
+			}
+
+			fmt.Println("Model validated successfully!")
+			cfg.AIModel = modelName
+			if err := config.Save(cfg); err != nil {
+				log.Printf("Warning: Failed to save config: %v", err)
+			}
+			break
 		}
 	}
 
