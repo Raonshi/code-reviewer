@@ -62,6 +62,9 @@ On the first run, you will be prompted to enter your Google AI API Key and selec
 # Run code review on staged changes
 ./code-reviewer report --staged
 
+# Run code review on unstaged changes
+./code-reviewer report --unstaged
+
 # Generate auto-fixes for code issues (NOT SUPPORTED YET)
 ./code-reviewer fix
 ```

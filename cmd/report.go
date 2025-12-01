@@ -11,12 +11,27 @@ import (
 )
 
 var reportStaged bool
+var reportUnstaged bool
 
 var reportCmd = &cobra.Command{
 	Use:   "report",
 	Short: "Generate a code review report",
 	Run: func(cmd *cobra.Command, args []string) {
-		diff, err := git.GetDiff(reportStaged)
+		if reportStaged && reportUnstaged {
+			fmt.Fprintln(os.Stderr, "Error: --staged and --unstaged flags cannot be used together")
+			os.Exit(1)
+		}
+
+		var mode git.DiffMode
+		if reportStaged {
+			mode = git.DiffModeStaged
+		} else if reportUnstaged {
+			mode = git.DiffModeUnstaged
+		} else {
+			mode = git.DiffModeAll
+		}
+
+		diff, err := git.GetDiff(mode)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error getting diff: %v\n", err)
 			os.Exit(1)
@@ -43,4 +58,5 @@ var reportCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(reportCmd)
 	reportCmd.Flags().BoolVar(&reportStaged, "staged", false, "Review staged changes")
+	reportCmd.Flags().BoolVar(&reportUnstaged, "unstaged", false, "Review unstaged changes")
 }
