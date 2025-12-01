@@ -1,8 +1,5 @@
 # AI Code Review Agent CLI
 
-[English](README.en.md) | [한국어](README.ko.md)
-
-
 **AI Code Review Agent CLI** is a tool that leverages Google Gemini AI to automatically analyze Git changes and provide professional review reports for code quality improvement.
 
 This project aims to streamline the code review process by proactively identifying potential bugs, security vulnerabilities, and performance issues in developer code, and providing concrete improvement suggestions in Korean (or English).
@@ -11,7 +8,7 @@ This project aims to streamline the code review process by proactively identifyi
 
 *   **Language**: Go 1.25.4
 *   **CLI Framework**: [Cobra](https://github.com/spf13/cobra)
-*   **AI Model**: Google Gemini 2.5 Flash (via [Google GenAI SDK](https://github.com/googleapis/go-genai))
+*   **AI Model**: Google Gemini (Configurable, default: `gemini-2.5-flash`) (via [Google GenAI SDK](https://github.com/googleapis/go-genai))
 *   **Configuration**: JSON based local config
 
 ## Getting Started
@@ -21,6 +18,14 @@ This project aims to streamline the code review process by proactively identifyi
 *   **Go**: Version 1.25 or higher ([Download](https://go.dev/dl/))
 *   **Git**: Required for project version control and tracking changes.
 *   **Google AI API Key**: API key required for using the Gemini model. ([Get API Key](https://aistudio.google.com/app/apikey))
+
+### Homebrew
+
+You can install `code-reviewer` using Homebrew:
+
+```bash
+brew install Raonshi/tap/code-reviewer
+```
 
 ### Installation
 
@@ -47,7 +52,7 @@ go build -o code-reviewer main.go
 ./code-reviewer --help
 ```
 
-On the first run, you will be prompted to enter your Google AI API Key.
+On the first run, you will be prompted to enter your Google AI API Key and select an AI Model (default: `gemini-2.5-flash`).
 
 ## Usage
 ```bash
@@ -57,13 +62,16 @@ On the first run, you will be prompted to enter your Google AI API Key.
 # Run code review on staged changes
 ./code-reviewer report --staged
 
+# Run code review on unstaged changes
+./code-reviewer report --unstaged
+
 # Generate auto-fixes for code issues (NOT SUPPORTED YET)
 ./code-reviewer fix
 ```
 
 ## Key Features
 
-*   **AI-Powered Code Review**: Uses the Google Gemini 2.5 Flash model to deeply analyze code changes (`git diff`).
+*   **AI-Powered Code Review**: Uses Google Gemini models (configurable) to deeply analyze code changes (`git diff`).
 *   **Korean Reports**: All analysis results and improvement suggestions are provided in Korean for easy understanding.
 *   **Automatic Grading**: Changes are automatically graded into 4 levels: **Good**, **Not Bad**, **Bad**, **Need Check** to quickly identify importance.
 *   **Concrete Improvement Suggestions**: Beyond simple pointers, it provides immediately applicable code snippets and refactoring guides for areas needing correction.

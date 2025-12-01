@@ -19,6 +19,14 @@ This project aims to streamline the code review process by proactively identifyi
 *   **Git**: Required for project version control and tracking changes.
 *   **Google AI API Key**: API key required for using the Gemini model. ([Get API Key](https://aistudio.google.com/app/apikey))
 
+### Homebrew
+
+You can install `code-reviewer` using Homebrew:
+
+```bash
+brew install Raonshi/tap/code-reviewer
+```
+
 ### Installation
 
 Clone the project and install dependencies.
@@ -53,6 +61,9 @@ On the first run, you will be prompted to enter your Google AI API Key and selec
 
 # Run code review on staged changes
 ./code-reviewer report --staged
+
+# Run code review on unstaged changes
+./code-reviewer report --unstaged
 
 # Generate auto-fixes for code issues (NOT SUPPORTED YET)
 ./code-reviewer fix

@@ -19,6 +19,14 @@
 *   **Git**: 프로젝트 버전 관리 및 변경 사항 추적을 위해 필요합니다.
 *   **Google AI API Key**: Gemini 모델 사용을 위한 API 키가 필요합니다. ([Get API Key](https://aistudio.google.com/app/apikey))
 
+### Homebrew
+
+Homebrew를 사용하여 `code-reviewer`를 설치할 수 있습니다:
+
+```bash
+brew install Raonshi/tap/code-reviewer
+```
+
 ### Installation
 
 프로젝트를 클론하고 의존성을 설치합니다.
@@ -48,11 +56,14 @@ go build -o code-reviewer main.go
 
 ## Usage
 ```bash
-# 코드 리뷰 실행 (기본값: 변경 사항 전체)
+# 코드 리뷰 실행 (기본값: 모든 변경 사항)
 ./code-reviewer report
 
 # Staged 변경 사항에 대한 코드 리뷰 실행
 ./code-reviewer report --staged
+
+# Unstaged 변경 사항에 대한 코드 리뷰 실행
+./code-reviewer report --unstaged
 
 # 코드 문제에 대한 자동 수정 생성 (아직 미지원)
 ./code-reviewer fix

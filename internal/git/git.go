@@ -12,13 +12,25 @@ func IsRepo() bool {
 	return !os.IsNotExist(err)
 }
 
-// GetDiff retrieves the diff of changes.
-// If staged is true, it returns `git diff --staged`.
-// If staged is false, it returns `git diff`.
-func GetDiff(staged bool) (string, error) {
+// DiffMode defines the type of diff to retrieve
+type DiffMode string
+
+const (
+	DiffModeAll      DiffMode = "all"
+	DiffModeStaged   DiffMode = "staged"
+	DiffModeUnstaged DiffMode = "unstaged"
+)
+
+// GetDiff retrieves the diff of changes based on the mode.
+func GetDiff(mode DiffMode) (string, error) {
 	args := []string{"diff"}
-	if staged {
+	switch mode {
+	case DiffModeStaged:
 		args = append(args, "--staged")
+	case DiffModeAll:
+		args = append(args, "HEAD")
+	case DiffModeUnstaged:
+		// Default behavior (git diff)
 	}
 
 	cmd := exec.Command("git", args...)
