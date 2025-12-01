@@ -1,0 +1,85 @@
+version: 2
+
+project_name: code-reviewer
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - format: tar.gz
+    # this name template makes the tarballs compatible with the default naming
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+
+brews:
+  -
+    # Name of the recipe
+    name: code-reviewer
+
+    # Repository to push the tap to.
+    repository:
+      owner: Raonshi
+      name: homebrew-tap
+      # token: "{{ .Env.GITHUB_TOKEN }}" # This is the default
+
+    # Directory folder inside the repository to put the formula.
+    directory: Formula
+
+    # Git author used to commit to the repository.
+    commit_author:
+      name: goreleaserbot
+      email: bot@goreleaser.com
+
+    # The project's homepage.
+    homepage: "https://github.com/Raonshi/code-reviewer"
+
+    # Template for the url which is determined by the given Token (github, gitlab or gitea)
+    url_template: "https://github.com/Raonshi/code-reviewer/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
+
+    # Description of the software.
+    description: "AI-powered code review tool for Golang projects"
+
+    # License of the software.
+    license: "MIT"
+
+    # Dependencies
+    dependencies:
+      - name: git
+
+    # Caveats to display after installation or before uninstallation
+    caveats: |
+      To remove all configuration files when uninstalling, run:
+      rm -rf ~/.code-reviewer
+
+    # Custom install script
+    install: |
+      bin.install "code-reviewer"

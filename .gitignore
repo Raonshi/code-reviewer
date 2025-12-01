@@ -1,3 +1,5 @@
 code-reviewer
 .code-reviewer/
 config.json
+# Added by goreleaser init:
+dist/
