@@ -19,6 +19,14 @@
 *   **Git**: 프로젝트 버전 관리 및 변경 사항 추적을 위해 필요합니다.
 *   **Google AI API Key**: Gemini 모델 사용을 위한 API 키가 필요합니다. ([Get API Key](https://aistudio.google.com/app/apikey))
 
+### Homebrew
+
+Homebrew를 사용하여 `code-reviewer`를 설치할 수 있습니다:
+
+```bash
+brew install Raonshi/tap/code-reviewer
+```
+
 ### Installation
 
 프로젝트를 클론하고 의존성을 설치합니다.
