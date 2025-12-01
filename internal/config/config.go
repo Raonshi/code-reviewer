@@ -92,7 +92,7 @@ func PromptForAPIKey() (string, error) {
 // PromptForAIModel asks the user to input their desired AI Model via stdin.
 func PromptForAIModel() (string, error) {
 	reader := bufio.NewReader(os.Stdin)
-	fmt.Print("AI Model not found. Please enter the AI Model to use (e.g., gemini-2.5-flash): ")
+	fmt.Print("AI Model not found. Please enter the AI Model to use (default: gemini-2.5-flash): ")
 	text, err := reader.ReadString('\n')
 	if err != nil {
 		return "", fmt.Errorf("failed to read input: %w", err)
