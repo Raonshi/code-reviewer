@@ -15,7 +15,7 @@ var fixCmd = &cobra.Command{
 	Short: "Auto-fix code issues",
 	Run: func(cmd *cobra.Command, args []string) {
 		// Try staged first
-		diff, err := git.GetDiff(true)
+		diff, err := git.GetDiff(git.DiffModeStaged)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error getting staged diff: %v\n", err)
 			os.Exit(1)
@@ -23,7 +23,7 @@ var fixCmd = &cobra.Command{
 
 		// If no staged changes, try unstaged
 		if diff == "" {
-			diff, err = git.GetDiff(false)
+			diff, err = git.GetDiff(git.DiffModeUnstaged)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error getting unstaged diff: %v\n", err)
 				os.Exit(1)

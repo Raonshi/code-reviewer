@@ -11,86 +11,38 @@ import (
 	"google.golang.org/genai"
 )
 
-const DefaultReviewPrompt = `
-# Role
-You are a **Senior Software Engineer** and **Code Review Expert** with experience at top-tier tech companies like Google or Meta. Your goal is to analyze ` + "`git diff`" + ` changes to prevent potential bugs, ensure security, and maintain the highest level of code quality.
-
-# Primary Constraints
-1.  **Output Language**: All explanations, summaries, analysis, and feedback must be written in **Korean**.
-2.  **Technical Terms**: Use original English terms for industry-standard terminology (e.g., 'Edge Case', 'Null Pointer Exception', 'Race Condition'), but provide Korean explanations if the context requires clarity.
-
-# Workflow
-1.  **Analyze & Summarize**: Understand the logic changes in the provided ` + "`git diff`" + ` and provide a brief summary of the changes.
-2.  **Deep Code Review**: Scrutinize the code for:
-    * **Syntax & Logic**: Errors, bugs, and potential faults.
-    * **Security**: Vulnerabilities (e.g., injection, data exposure).
-    * **Performance**: Efficiency and resource usage.
-    * **Refactoring**: Code cleanliness and maintainability.
-3.  **Classify**: Evaluate each function or module based on the **Classification Criteria** below.
-4.  **Propose Improvements**: For any code not rated as 'Good', provide concrete, actionable improvement guides or corrected code snippets in **Korean**.
-
-# Classification Criteria
-Evaluate each change strictly according to the following levels:
-
-1.  **Good**
-    * **Definition**: Probability of errors converges to 0%.
-    * **Status**: Ready for immediate deployment. Guarantees ≥ 99% normal operation.
-2.  **Not Bad**
-    * **Definition**: No immediate errors, but the code is messy or has potential risks in Edge Cases.
-    * **Status**: Normal operation within intended scope. Guarantees ≥ 90% normal operation.
-3.  **Bad**
-    * **Definition**: Fatal errors, bugs, security risks, or performance degradation are certain.
-    * **Status**: Cannot be deployed. Guarantees < 90% normal operation.
-4.  **Need Check**
-    * **Definition**: No technical errors (≥ 99% normal operation), but business logic has significantly changed.
-    * **Status**: Requires human verification to ensure it matches the planning intent.
-
-# Output Format
-Please strictly follow the format below for your report:
-
-## [Function/Module Name]
-- **Grade**: [Good / Not Bad / Bad / Need Check]
-- **Summary**: (Briefly summarize the changes in this module in **Korean**)
-- **Analysis**: (Detailed evaluation of logic, security, and performance in **Korean**)
-- **Improvement Suggestions**: (Required for 'Not Bad', 'Bad', or 'Need Check'. Provide specific code fixes or refactoring advice in **Korean**)
-
----
-*(Repeat the above block for each major change)*
-
-# Input Data
-[Git Diff Data will be inserted here]
-`
-
-const DefaultFixPrompt = `
-# Role
-You are a **Senior Software Engineer** and **Code Review Expert**. Your goal is to provide corrected code snippets to fix issues found in the provided ` + "`git diff`" + `.
-
-# Primary Constraints
-1.  **Output Language**: The explanation should be in **Korean**, but the code must be in the original language.
-2.  **Scope**: Only fix the code present in the diff. Do not rewrite the entire file unless necessary.
-
-# Workflow
-1.  **Analyze**: Understand the issues in the ` + "`git diff`" + `.
-2.  **Fix**: Generate the corrected code.
-3.  **Explain**: Briefly explain what was fixed in **Korean**.
-
-# Output Format
-Provide the fixed code in a code block, followed by a brief explanation.
-`
-
 // Agent represents the AI agent.
 type Agent struct {
-	llm model.LLM
+	llm            model.LLM
+	outputLanguage string
 }
 
 // New creates a new Agent.
 func New() *Agent {
 	ctx := context.Background()
 
+	cfg := ensureConfig()
+	ensureModelValidation(ctx, cfg)
+
+	// Use the configured Gemini model.
+	m, err := gemini.NewModel(ctx, cfg.AIModel, &genai.ClientConfig{
+		APIKey: cfg.GoogleAIAPIKey,
+	})
+	if err != nil {
+		log.Fatalf("Failed to create model: %v", err)
+	}
+
+	return &Agent{
+		llm:            m,
+		outputLanguage: cfg.OutputLanguage,
+	}
+}
+
+// ensureConfig loads the config or prompts the user for necessary information.
+func ensureConfig() *config.Config {
 	cfg, err := config.Load()
 	if err != nil {
 		log.Printf("Warning: Failed to load config: %v", err)
-		// Fallback to empty config, will prompt below
 		cfg = &config.Config{}
 	}
 
@@ -107,52 +59,38 @@ func New() *Agent {
 			log.Printf("Warning: Failed to save config: %v", err)
 		}
 	}
+	if cfg.OutputLanguage == "" {
+		lang, err := config.PromptForOutputLanguage()
+		if err != nil {
+			log.Fatalf("Failed to get Output Language: %v", err)
+		}
+		if lang == "" {
+			lang = "Korean"
+		}
+		cfg.OutputLanguage = lang
+		if err := config.Save(cfg); err != nil {
+			log.Printf("Warning: Failed to save config: %v", err)
+		}
+	}
+	return cfg
+}
 
-	if cfg.AIModel == "" {
-		for {
-			modelName, err := config.PromptForAIModel()
-			if err != nil {
-				log.Fatalf("Failed to get AI Model: %v", err)
-			}
-			if modelName == "" {
-				modelName = "gemini-2.5-flash"
-			}
+// ensureModelValidation ensures the AI model is selected and validated.
+func ensureModelValidation(ctx context.Context, cfg *config.Config) {
+	if cfg.AIModel != "" {
+		return
+	}
 
-			// Validate the model
-			fmt.Printf("Validating model '%s'...\n", modelName)
-			tempModel, err := gemini.NewModel(ctx, modelName, &genai.ClientConfig{
-				APIKey: cfg.GoogleAIAPIKey,
-			})
-			if err != nil {
-				fmt.Printf("Error creating model client: %v. Please try again.\n", err)
-				continue
-			}
+	for {
+		modelName, err := config.PromptForAIModel()
+		if err != nil {
+			log.Fatalf("Failed to get AI Model: %v", err)
+		}
+		if modelName == "" {
+			modelName = "gemini-2.5-flash"
+		}
 
-			// Try a minimal generation to verify the model name and API key
-			validateReq := &model.LLMRequest{
-				Contents: []*genai.Content{
-					{
-						Parts: []*genai.Part{
-							genai.NewPartFromText("Hi"),
-						},
-					},
-				},
-			}
-			// We need to consume the stream to check for errors
-			stream := tempModel.GenerateContent(ctx, validateReq, false)
-			var validationErr error
-			for _, err := range stream {
-				if err != nil {
-					validationErr = err
-					break
-				}
-			}
-
-			if validationErr != nil {
-				fmt.Printf("Validation failed: %v. Please check the model name and try again.\n", validationErr)
-				continue
-			}
-
+		if validateModel(ctx, modelName, cfg.GoogleAIAPIKey) {
 			fmt.Println("Model validated successfully!")
 			cfg.AIModel = modelName
 			if err := config.Save(cfg); err != nil {
@@ -161,70 +99,60 @@ func New() *Agent {
 			break
 		}
 	}
+}
 
-	// Use the configured Gemini model.
-	m, err := gemini.NewModel(ctx, cfg.AIModel, &genai.ClientConfig{
-		APIKey: cfg.GoogleAIAPIKey,
+// validateModel attempts to validate the model with a minimal request.
+func validateModel(ctx context.Context, modelName, apiKey string) bool {
+	fmt.Printf("Validating model '%s'...\n", modelName)
+	tempModel, err := gemini.NewModel(ctx, modelName, &genai.ClientConfig{
+		APIKey: apiKey,
 	})
-
 	if err != nil {
-		log.Fatalf("Failed to create model: %v", err)
+		fmt.Printf("Error creating model client: %v. Please try again.\n", err)
+		return false
 	}
 
-	return &Agent{
-		llm: m,
+	validateReq := &model.LLMRequest{
+		Contents: []*genai.Content{
+			{
+				Parts: []*genai.Part{
+					genai.NewPartFromText("Hi"),
+				},
+			},
+		},
 	}
+
+	stream := tempModel.GenerateContent(ctx, validateReq, false)
+	for _, err := range stream {
+		if err != nil {
+			fmt.Printf("Validation failed: %v. Please check the model name and try again.\n", err)
+			return false
+		}
+	}
+	return true
 }
 
 // Analyze analyzes the code changes.
 func (a *Agent) Analyze(diff string) (string, error) {
-	ctx := context.Background()
-
-	// Construct the prompt
-	prompt := fmt.Sprintf("%s\n\n%s", DefaultReviewPrompt, diff)
-
-	req := &model.LLMRequest{
-		Contents: []*genai.Content{
-			{
-				Parts: []*genai.Part{
-					genai.NewPartFromText(prompt),
-				},
-			},
-		},
-	}
-
-	// Generate content
-	// GenerateContent returns an iterator.
-	respStream := a.llm.GenerateContent(ctx, req, false)
-
-	var fullText string
-	for resp, err := range respStream {
-		if err != nil {
-			return "", fmt.Errorf("failed to generate content: %w", err)
-		}
-		if resp.Content != nil {
-			for _, part := range resp.Content.Parts {
-				if part.Text != "" {
-					fullText += part.Text
-				}
-			}
-		}
-	}
-
-	if fullText == "" {
-		return "", fmt.Errorf("no content generated")
-	}
-
-	return fullText, nil
+	prompt := fmt.Sprintf("%s\n\n%s", fmt.Sprintf(DefaultReviewPrompt, a.outputLanguage, a.outputLanguage, a.outputLanguage, a.outputLanguage, a.outputLanguage, a.outputLanguage), diff)
+	return a.generateContent(prompt)
 }
 
 // Fix generates fixes for the code changes.
 func (a *Agent) Fix(diff string) (string, error) {
+	prompt := fmt.Sprintf("%s\n\n%s", fmt.Sprintf(DefaultFixPrompt, a.outputLanguage, a.outputLanguage), diff)
+	return a.generateContent(prompt)
+}
+
+// Document generates technical documentation for the code changes.
+func (a *Agent) Document(diff string) (string, error) {
+	prompt := fmt.Sprintf("%s\n\n%s", fmt.Sprintf(DefaultDocumentPrompt, a.outputLanguage, a.outputLanguage, a.outputLanguage, a.outputLanguage), diff)
+	return a.generateContent(prompt)
+}
+
+// generateContent calls the LLM and aggregates the response.
+func (a *Agent) generateContent(prompt string) (string, error) {
 	ctx := context.Background()
-
-	// Construct the prompt
-	prompt := fmt.Sprintf("%s\n\n%s", DefaultFixPrompt, diff)
-
 	req := &model.LLMRequest{
 		Contents: []*genai.Content{
 			{
@@ -235,7 +163,6 @@ func (a *Agent) Fix(diff string) (string, error) {
 		},
 	}
 
-	// Generate content
 	respStream := a.llm.GenerateContent(ctx, req, false)
 
 	var fullText string

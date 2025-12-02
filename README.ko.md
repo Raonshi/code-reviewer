@@ -56,11 +56,14 @@ go build -o code-reviewer main.go
 
 ## Usage
 ```bash
-# 코드 리뷰 실행 (기본값: 변경 사항 전체)
+# 코드 리뷰 실행 (기본값: 모든 변경 사항)
 ./code-reviewer report
 
 # Staged 변경 사항에 대한 코드 리뷰 실행
 ./code-reviewer report --staged
+
+# Unstaged 변경 사항에 대한 코드 리뷰 실행
+./code-reviewer report --unstaged
 
 # 코드 문제에 대한 자동 수정 생성 (아직 미지원)
 ./code-reviewer fix
