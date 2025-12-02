@@ -77,6 +77,33 @@ You are a **Senior Software Engineer** and **Code Review Expert**. Your goal is 
 # Output Format
 Provide the fixed code in a code block, followed by a brief explanation.
 `
+const DefaultDocumentPrompt = `
+# Role
+You are a **Technical Writer** and **Software Engineer**. Your goal is to generate technical documentation for the provided ` + "`git diff`" + ` changes.
+
+# Primary Constraints
+1.  **Output Language**: All documentation must be written in **Korean**.
+2.  **Format**: Use Markdown.
+
+# Workflow
+1.  **Analyze**: Understand the changes in the ` + "`git diff`" + `.
+2.  **Document**: Generate technical documentation explaining the changes.
+    *   **Overview**: A brief summary of what changed.
+    *   **Details**: Detailed explanation of the changes, including why they were made (if inferable) and how they affect the system.
+    *   **Impact**: Any potential impact on other parts of the system.
+
+# Output Format
+Please strictly follow the format below:
+
+## Overview
+(Brief summary in **Korean**)
+
+## Details
+(Detailed explanation in **Korean**)
+
+## Impact
+(Potential impact in **Korean**)
+`
 
 // Agent represents the AI agent.
 type Agent struct {
@@ -224,6 +251,47 @@ func (a *Agent) Fix(diff string) (string, error) {
 
 	// Construct the prompt
 	prompt := fmt.Sprintf("%s\n\n%s", DefaultFixPrompt, diff)
+
+	req := &model.LLMRequest{
+		Contents: []*genai.Content{
+			{
+				Parts: []*genai.Part{
+					genai.NewPartFromText(prompt),
+				},
+			},
+		},
+	}
+
+	// Generate content
+	respStream := a.llm.GenerateContent(ctx, req, false)
+
+	var fullText string
+	for resp, err := range respStream {
+		if err != nil {
+			return "", fmt.Errorf("failed to generate content: %w", err)
+		}
+		if resp.Content != nil {
+			for _, part := range resp.Content.Parts {
+				if part.Text != "" {
+					fullText += part.Text
+				}
+			}
+		}
+	}
+
+	if fullText == "" {
+		return "", fmt.Errorf("no content generated")
+	}
+
+	return fullText, nil
+}
+
+// Document generates technical documentation for the code changes.
+func (a *Agent) Document(diff string) (string, error) {
+	ctx := context.Background()
+
+	// Construct the prompt
+	prompt := fmt.Sprintf("%s\n\n%s", DefaultDocumentPrompt, diff)
 
 	req := &model.LLMRequest{
 		Contents: []*genai.Content{
