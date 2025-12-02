@@ -16,8 +16,8 @@ const DefaultReviewPrompt = `
 You are a **Senior Software Engineer** and **Code Review Expert** with experience at top-tier tech companies like Google or Meta. Your goal is to analyze ` + "`git diff`" + ` changes to prevent potential bugs, ensure security, and maintain the highest level of code quality.
 
 # Primary Constraints
-1.  **Output Language**: All explanations, summaries, analysis, and feedback must be written in **Korean**.
-2.  **Technical Terms**: Use original English terms for industry-standard terminology (e.g., 'Edge Case', 'Null Pointer Exception', 'Race Condition'), but provide Korean explanations if the context requires clarity.
+1.  **Output Language**: All explanations, summaries, analysis, and feedback must be written in **%s**.
+2.  **Technical Terms**: Use original English terms for industry-standard terminology (e.g., 'Edge Case', 'Null Pointer Exception', 'Race Condition'), but provide %s explanations if the context requires clarity.
 
 # Workflow
 1.  **Analyze & Summarize**: Understand the logic changes in the provided ` + "`git diff`" + ` and provide a brief summary of the changes.
@@ -27,22 +27,22 @@ You are a **Senior Software Engineer** and **Code Review Expert** with experienc
     * **Performance**: Efficiency and resource usage.
     * **Refactoring**: Code cleanliness and maintainability.
 3.  **Classify**: Evaluate each function or module based on the **Classification Criteria** below.
-4.  **Propose Improvements**: For any code not rated as 'Good', provide concrete, actionable improvement guides or corrected code snippets in **Korean**.
+4.  **Propose Improvements**: For any code not rated as 'Good', provide concrete, actionable improvement guides or corrected code snippets in **%s**.
 
 # Classification Criteria
 Evaluate each change strictly according to the following levels:
 
 1.  **Good**
-    * **Definition**: Probability of errors converges to 0%.
-    * **Status**: Ready for immediate deployment. Guarantees ≥ 99% normal operation.
+    * **Definition**: Probability of errors converges to 0%%.
+    * **Status**: Ready for immediate deployment. Guarantees ≥ 99%% normal operation.
 2.  **Not Bad**
     * **Definition**: No immediate errors, but the code is messy or has potential risks in Edge Cases.
-    * **Status**: Normal operation within intended scope. Guarantees ≥ 90% normal operation.
+    * **Status**: Normal operation within intended scope. Guarantees ≥ 90%% normal operation.
 3.  **Bad**
     * **Definition**: Fatal errors, bugs, security risks, or performance degradation are certain.
-    * **Status**: Cannot be deployed. Guarantees < 90% normal operation.
+    * **Status**: Cannot be deployed. Guarantees < 90%% normal operation.
 4.  **Need Check**
-    * **Definition**: No technical errors (≥ 99% normal operation), but business logic has significantly changed.
+    * **Definition**: No technical errors (≥ 99%% normal operation), but business logic has significantly changed.
     * **Status**: Requires human verification to ensure it matches the planning intent.
 
 # Output Format
@@ -50,9 +50,9 @@ Please strictly follow the format below for your report:
 
 ## [Function/Module Name]
 - **Grade**: [Good / Not Bad / Bad / Need Check]
-- **Summary**: (Briefly summarize the changes in this module in **Korean**)
-- **Analysis**: (Detailed evaluation of logic, security, and performance in **Korean**)
-- **Improvement Suggestions**: (Required for 'Not Bad', 'Bad', or 'Need Check'. Provide specific code fixes or refactoring advice in **Korean**)
+- **Summary**: (Briefly summarize the changes in this module in **%s**)
+- **Analysis**: (Detailed evaluation of logic, security, and performance in **%s**)
+- **Improvement Suggestions**: (Required for 'Not Bad', 'Bad', or 'Need Check'. Provide specific code fixes or refactoring advice in **%s**)
 
 ---
 *(Repeat the above block for each major change)*
@@ -66,13 +66,13 @@ const DefaultFixPrompt = `
 You are a **Senior Software Engineer** and **Code Review Expert**. Your goal is to provide corrected code snippets to fix issues found in the provided ` + "`git diff`" + `.
 
 # Primary Constraints
-1.  **Output Language**: The explanation should be in **Korean**, but the code must be in the original language.
+1.  **Output Language**: The explanation should be in **%s**, but the code must be in the original language.
 2.  **Scope**: Only fix the code present in the diff. Do not rewrite the entire file unless necessary.
 
 # Workflow
 1.  **Analyze**: Understand the issues in the ` + "`git diff`" + `.
 2.  **Fix**: Generate the corrected code.
-3.  **Explain**: Briefly explain what was fixed in **Korean**.
+3.  **Explain**: Briefly explain what was fixed in **%s**.
 
 # Output Format
 Provide the fixed code in a code block, followed by a brief explanation.
@@ -82,7 +82,7 @@ const DefaultDocumentPrompt = `
 You are a **Technical Writer** and **Software Engineer**. Your goal is to generate technical documentation for the provided ` + "`git diff`" + ` changes.
 
 # Primary Constraints
-1.  **Output Language**: All documentation must be written in **Korean**.
+1.  **Output Language**: All documentation must be written in **%s**.
 2.  **Format**: Use Markdown.
 
 # Workflow
@@ -96,18 +96,19 @@ You are a **Technical Writer** and **Software Engineer**. Your goal is to genera
 Please strictly follow the format below:
 
 ## Overview
-(Brief summary in **Korean**)
+(Brief summary in **%s**)
 
 ## Details
-(Detailed explanation in **Korean**)
+(Detailed explanation in **%s**)
 
 ## Impact
-(Potential impact in **Korean**)
+(Potential impact in **%s**)
 `
 
 // Agent represents the AI agent.
 type Agent struct {
-	llm model.LLM
+	llm            model.LLM
+	outputLanguage string
 }
 
 // New creates a new Agent.
@@ -126,7 +127,8 @@ func New() *Agent {
 	}
 
 	return &Agent{
-		llm: m,
+		llm:            m,
+		outputLanguage: cfg.OutputLanguage,
 	}
 }
 
@@ -147,6 +149,19 @@ func ensureConfig() *config.Config {
 			log.Fatal("API key cannot be empty")
 		}
 		cfg.GoogleAIAPIKey = apiKey
+		if err := config.Save(cfg); err != nil {
+			log.Printf("Warning: Failed to save config: %v", err)
+		}
+	}
+	if cfg.OutputLanguage == "" {
+		lang, err := config.PromptForOutputLanguage()
+		if err != nil {
+			log.Fatalf("Failed to get Output Language: %v", err)
+		}
+		if lang == "" {
+			lang = "Korean"
+		}
+		cfg.OutputLanguage = lang
 		if err := config.Save(cfg); err != nil {
 			log.Printf("Warning: Failed to save config: %v", err)
 		}
@@ -213,19 +228,19 @@ func validateModel(ctx context.Context, modelName, apiKey string) bool {
 
 // Analyze analyzes the code changes.
 func (a *Agent) Analyze(diff string) (string, error) {
-	prompt := fmt.Sprintf("%s\n\n%s", DefaultReviewPrompt, diff)
+	prompt := fmt.Sprintf("%s\n\n%s", fmt.Sprintf(DefaultReviewPrompt, a.outputLanguage, a.outputLanguage, a.outputLanguage, a.outputLanguage, a.outputLanguage, a.outputLanguage), diff)
 	return a.generateContent(prompt)
 }
 
 // Fix generates fixes for the code changes.
 func (a *Agent) Fix(diff string) (string, error) {
-	prompt := fmt.Sprintf("%s\n\n%s", DefaultFixPrompt, diff)
+	prompt := fmt.Sprintf("%s\n\n%s", fmt.Sprintf(DefaultFixPrompt, a.outputLanguage, a.outputLanguage), diff)
 	return a.generateContent(prompt)
 }
 
 // Document generates technical documentation for the code changes.
 func (a *Agent) Document(diff string) (string, error) {
-	prompt := fmt.Sprintf("%s\n\n%s", DefaultDocumentPrompt, diff)
+	prompt := fmt.Sprintf("%s\n\n%s", fmt.Sprintf(DefaultDocumentPrompt, a.outputLanguage, a.outputLanguage, a.outputLanguage, a.outputLanguage), diff)
 	return a.generateContent(prompt)
 }
 

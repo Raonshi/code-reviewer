@@ -16,6 +16,7 @@ const configFileName = "config.json"
 type Config struct {
 	GoogleAIAPIKey string `json:"google_ai_api_key"`
 	AIModel        string `json:"ai_model"`
+	OutputLanguage string `json:"output_language"`
 }
 
 // getConfigPath returns the full path to the configuration file.
@@ -93,6 +94,17 @@ func PromptForAPIKey() (string, error) {
 func PromptForAIModel() (string, error) {
 	reader := bufio.NewReader(os.Stdin)
 	fmt.Print("AI Model not found. Please enter the AI Model to use (default: gemini-2.5-flash): ")
+	text, err := reader.ReadString('\n')
+	if err != nil {
+		return "", fmt.Errorf("failed to read input: %w", err)
+	}
+	return strings.TrimSpace(text), nil
+}
+
+// PromptForOutputLanguage asks the user to input their desired output language via stdin.
+func PromptForOutputLanguage() (string, error) {
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Print("Output Language not found. Please enter the Output Language (default: Korean): ")
 	text, err := reader.ReadString('\n')
 	if err != nil {
 		return "", fmt.Errorf("failed to read input: %w", err)
