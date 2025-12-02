@@ -114,10 +114,27 @@ type Agent struct {
 func New() *Agent {
 	ctx := context.Background()
 
+	cfg := ensureConfig()
+	ensureModelValidation(ctx, cfg)
+
+	// Use the configured Gemini model.
+	m, err := gemini.NewModel(ctx, cfg.AIModel, &genai.ClientConfig{
+		APIKey: cfg.GoogleAIAPIKey,
+	})
+	if err != nil {
+		log.Fatalf("Failed to create model: %v", err)
+	}
+
+	return &Agent{
+		llm: m,
+	}
+}
+
+// ensureConfig loads the config or prompts the user for necessary information.
+func ensureConfig() *config.Config {
 	cfg, err := config.Load()
 	if err != nil {
 		log.Printf("Warning: Failed to load config: %v", err)
-		// Fallback to empty config, will prompt below
 		cfg = &config.Config{}
 	}
 
@@ -134,52 +151,25 @@ func New() *Agent {
 			log.Printf("Warning: Failed to save config: %v", err)
 		}
 	}
+	return cfg
+}
 
-	if cfg.AIModel == "" {
-		for {
-			modelName, err := config.PromptForAIModel()
-			if err != nil {
-				log.Fatalf("Failed to get AI Model: %v", err)
-			}
-			if modelName == "" {
-				modelName = "gemini-2.5-flash"
-			}
+// ensureModelValidation ensures the AI model is selected and validated.
+func ensureModelValidation(ctx context.Context, cfg *config.Config) {
+	if cfg.AIModel != "" {
+		return
+	}
 
-			// Validate the model
-			fmt.Printf("Validating model '%s'...\n", modelName)
-			tempModel, err := gemini.NewModel(ctx, modelName, &genai.ClientConfig{
-				APIKey: cfg.GoogleAIAPIKey,
-			})
-			if err != nil {
-				fmt.Printf("Error creating model client: %v. Please try again.\n", err)
-				continue
-			}
+	for {
+		modelName, err := config.PromptForAIModel()
+		if err != nil {
+			log.Fatalf("Failed to get AI Model: %v", err)
+		}
+		if modelName == "" {
+			modelName = "gemini-2.5-flash"
+		}
 
-			// Try a minimal generation to verify the model name and API key
-			validateReq := &model.LLMRequest{
-				Contents: []*genai.Content{
-					{
-						Parts: []*genai.Part{
-							genai.NewPartFromText("Hi"),
-						},
-					},
-				},
-			}
-			// We need to consume the stream to check for errors
-			stream := tempModel.GenerateContent(ctx, validateReq, false)
-			var validationErr error
-			for _, err := range stream {
-				if err != nil {
-					validationErr = err
-					break
-				}
-			}
-
-			if validationErr != nil {
-				fmt.Printf("Validation failed: %v. Please check the model name and try again.\n", validationErr)
-				continue
-			}
-
+		if validateModel(ctx, modelName, cfg.GoogleAIAPIKey) {
 			fmt.Println("Model validated successfully!")
 			cfg.AIModel = modelName
 			if err := config.Save(cfg); err != nil {
@@ -188,111 +178,60 @@ func New() *Agent {
 			break
 		}
 	}
+}
 
-	// Use the configured Gemini model.
-	m, err := gemini.NewModel(ctx, cfg.AIModel, &genai.ClientConfig{
-		APIKey: cfg.GoogleAIAPIKey,
+// validateModel attempts to validate the model with a minimal request.
+func validateModel(ctx context.Context, modelName, apiKey string) bool {
+	fmt.Printf("Validating model '%s'...\n", modelName)
+	tempModel, err := gemini.NewModel(ctx, modelName, &genai.ClientConfig{
+		APIKey: apiKey,
 	})
-
 	if err != nil {
-		log.Fatalf("Failed to create model: %v", err)
+		fmt.Printf("Error creating model client: %v. Please try again.\n", err)
+		return false
 	}
 
-	return &Agent{
-		llm: m,
+	validateReq := &model.LLMRequest{
+		Contents: []*genai.Content{
+			{
+				Parts: []*genai.Part{
+					genai.NewPartFromText("Hi"),
+				},
+			},
+		},
 	}
+
+	stream := tempModel.GenerateContent(ctx, validateReq, false)
+	for _, err := range stream {
+		if err != nil {
+			fmt.Printf("Validation failed: %v. Please check the model name and try again.\n", err)
+			return false
+		}
+	}
+	return true
 }
 
 // Analyze analyzes the code changes.
 func (a *Agent) Analyze(diff string) (string, error) {
-	ctx := context.Background()
-
-	// Construct the prompt
 	prompt := fmt.Sprintf("%s\n\n%s", DefaultReviewPrompt, diff)
-
-	req := &model.LLMRequest{
-		Contents: []*genai.Content{
-			{
-				Parts: []*genai.Part{
-					genai.NewPartFromText(prompt),
-				},
-			},
-		},
-	}
-
-	// Generate content
-	// GenerateContent returns an iterator.
-	respStream := a.llm.GenerateContent(ctx, req, false)
-
-	var fullText string
-	for resp, err := range respStream {
-		if err != nil {
-			return "", fmt.Errorf("failed to generate content: %w", err)
-		}
-		if resp.Content != nil {
-			for _, part := range resp.Content.Parts {
-				if part.Text != "" {
-					fullText += part.Text
-				}
-			}
-		}
-	}
-
-	if fullText == "" {
-		return "", fmt.Errorf("no content generated")
-	}
-
-	return fullText, nil
+	return a.generateContent(prompt)
 }
 
 // Fix generates fixes for the code changes.
 func (a *Agent) Fix(diff string) (string, error) {
-	ctx := context.Background()
-
-	// Construct the prompt
 	prompt := fmt.Sprintf("%s\n\n%s", DefaultFixPrompt, diff)
-
-	req := &model.LLMRequest{
-		Contents: []*genai.Content{
-			{
-				Parts: []*genai.Part{
-					genai.NewPartFromText(prompt),
-				},
-			},
-		},
-	}
-
-	// Generate content
-	respStream := a.llm.GenerateContent(ctx, req, false)
-
-	var fullText string
-	for resp, err := range respStream {
-		if err != nil {
-			return "", fmt.Errorf("failed to generate content: %w", err)
-		}
-		if resp.Content != nil {
-			for _, part := range resp.Content.Parts {
-				if part.Text != "" {
-					fullText += part.Text
-				}
-			}
-		}
-	}
-
-	if fullText == "" {
-		return "", fmt.Errorf("no content generated")
-	}
-
-	return fullText, nil
+	return a.generateContent(prompt)
 }
 
 // Document generates technical documentation for the code changes.
 func (a *Agent) Document(diff string) (string, error) {
-	ctx := context.Background()
-
-	// Construct the prompt
 	prompt := fmt.Sprintf("%s\n\n%s", DefaultDocumentPrompt, diff)
+	return a.generateContent(prompt)
+}
 
+// generateContent calls the LLM and aggregates the response.
+func (a *Agent) generateContent(prompt string) (string, error) {
+	ctx := context.Background()
 	req := &model.LLMRequest{
 		Contents: []*genai.Content{
 			{
@@ -303,7 +242,6 @@ func (a *Agent) Document(diff string) (string, error) {
 		},
 	}
 
-	// Generate content
 	respStream := a.llm.GenerateContent(ctx, req, false)
 
 	var fullText string
