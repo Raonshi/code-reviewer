@@ -2,7 +2,7 @@
 
 **AI Code Review Agent CLI** is a tool that leverages Google Gemini AI to automatically analyze Git changes and provide professional review reports for code quality improvement.
 
-This project aims to streamline the code review process by proactively identifying potential bugs, security vulnerabilities, and performance issues in developer code, and providing concrete improvement suggestions in Korean (or English).
+This project aims to streamline the code review process by proactively identifying potential bugs, security vulnerabilities, and performance issues in developer code, and providing concrete improvement suggestions in your preferred language (default: Korean).
 
 ## Tech Stack
 
@@ -52,7 +52,7 @@ go build -o code-reviewer main.go
 ./code-reviewer --help
 ```
 
-On the first run, you will be prompted to enter your Google AI API Key and select an AI Model (default: `gemini-2.5-flash`).
+On the first run, you will be prompted to enter your Google AI API Key, select an AI Model (default: `gemini-2.5-flash`), and choose an Output Language (default: `Korean`).
 
 ## Usage
 ```bash
@@ -65,14 +65,25 @@ On the first run, you will be prompted to enter your Google AI API Key and selec
 # Run code review on unstaged changes
 ./code-reviewer report --unstaged
 
-# Generate auto-fixes for code issues (NOT SUPPORTED YET)
+# Generate technical documentation for code changes
+./code-reviewer document
+
+# Generate auto-fixes for code issues (Prints proposed fix)
 ./code-reviewer fix
+
+# Manage configuration
+./code-reviewer config list
+./code-reviewer config get output_language
+./code-reviewer config set output_language English
 ```
 
 ## Key Features
 
 *   **AI-Powered Code Review**: Uses Google Gemini models (configurable) to deeply analyze code changes (`git diff`).
-*   **Korean Reports**: All analysis results and improvement suggestions are provided in Korean for easy understanding.
+*   **Multi-Language Support**: Supports output in various languages (configurable, default: Korean).
+*   **Configuration Management**: Easily manage API keys, models, and output languages via the `config` command.
 *   **Automatic Grading**: Changes are automatically graded into 4 levels: **Good**, **Not Bad**, **Bad**, **Need Check** to quickly identify importance.
 *   **Concrete Improvement Suggestions**: Beyond simple pointers, it provides immediately applicable code snippets and refactoring guides for areas needing correction.
+*   **Auto-Fix Generation**: Generates corrected code snippets for identified issues (currently prints to stdout).
+*   **Documentation Generation**: Automatically generates technical documentation for code changes using the `document` command.
 *   **Git Integration**: Automatically detects Staged and Unstaged changes in the current Git repository.
